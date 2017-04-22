@@ -12,7 +12,12 @@ local sprite = {
   plant_earth1=22,
   plant_earth2=23,
   plant_earth3=24,
-  plant_earth4=25
+  plant_earth4=25,
+
+  plant_flower1=6,
+  plant_flower2=7,
+  plant_flower3=8,
+  plant_flower4=9
 }
 
 local sprite_flag = {
@@ -45,6 +50,7 @@ local cell_type = {
 local state_cells = {}
 local state_cell_wetness = {}
 local state_cell_is_roots = {}
+
 local state_cell_x = 1
 local state_cell_y = 1
 
@@ -130,13 +136,16 @@ function wetness_chance(wetness)
   end
 end
 
-function wetness_to_sprite(wetness, is_roots)
+function wetness_to_sprite(wetness, is_roots, is_flower)
   if wetness < 5 then
-    return is_roots and sprite.plant_earth2 or sprite.earth2
+    return (is_roots and sprite.plant_earth2) or
+      (is_flower and sprite.plant_flower2) or sprite.earth2
   elseif wetness < 10 then
-    return is_roots and sprite.plant_earth3 or sprite.earth3
+    return (is_roots and sprite.plant_earth3) or
+      (is_flower and sprite.plant_flower3) or sprite.earth3
   else
-    return is_roots and sprite.plant_earth4 or sprite.earth4
+    return (is_roots and sprite.plant_earth4) or
+      (is_flower and sprite.plant_flower4) or sprite.earth4
   end
 end
 
@@ -167,7 +176,15 @@ function soak_cell_by_voxel(voxel_x, voxel_y)
   if wetness_destroy(wetness) then
     mset(map_x, map_y, 0)
   else
-    mset(map_x, map_y, wetness_to_sprite(wetness, state_cell_is_roots[idx]))
+    local is_roots = state_cell_is_roots[idx]
+    local is_flower = false
+    mset(map_x, map_y, wetness_to_sprite(wetness, is_roots, is_flower))
+
+    if is_roots then
+      is_roots = false
+      is_flower = true
+      mset(map_x, map_y - 1, wetness_to_sprite(wetness, is_roots, is_flower))
+    end
   end
 
   return wetness
@@ -221,8 +238,8 @@ function initialize_from_map(map_id)
         set_cell_voxels(x, y, voxel_type.solid)
       end
 
-      local is_roots = fget(mget(map_x, map_y), sprite_flag.is_roots)
-      state_cell_is_roots[idx] = is_roots
+      state_cell_is_roots[idx] =
+        fget(mget(map_x, map_y), sprite_flag.is_roots)
     end
   end
 end
