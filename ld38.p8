@@ -2,6 +2,15 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 
+local sprite = {
+  empty=0,
+  dry_earth=1
+}
+
+local sprite_flag = {
+  is_solid=0, is_frozen=1
+}
+
 local voxel_px_size = 2
 local voxel_dim_x = 128 / voxel_px_size
 local voxel_dim_y = 128 / voxel_px_size
@@ -14,7 +23,7 @@ local state_voxels = {}
 local state_voxel_horz_vel = {}
 local state_update_voxel_ptr = voxel_dim_x * voxel_dim_y
 
-local voxels_per_cell = 2
+local voxels_per_cell = 4
 local cell_px_size = voxel_px_size * voxels_per_cell
 local cell_dim_x = voxel_dim_x / voxels_per_cell
 local cell_dim_y = voxel_dim_y / voxels_per_cell
@@ -26,6 +35,9 @@ local cell_type = {
 local state_cells = {}
 local state_cell_x = 1
 local state_cell_y = 1
+
+local state_loaded_map = 0
+local state_target_map = 1
 
 function from_2d_voxel_idx(x, y)
   return ((x - 1) * voxel_dim_y) + y
@@ -64,7 +76,33 @@ end
 
 run_tests()
 
-function set_voxel_by_cell(cell_x, cell_y, set_to)
+function map_id_to_pos(id)
+  return (id - 1) * 16, 0, 16, 16
+end
+
+function cell_to_map_pos(map_id, x, y)
+  local map_x, map_y = map_id_to_pos(map_id)
+  return map_x + (x - 1), map_y + (y - 1)
+end
+
+function are_cell_voxels_empty(cell_x, cell_y)
+  local x1 = (cell_x - 1) * voxels_per_cell + 1
+  local y1 = (cell_y - 1) * voxels_per_cell + 1
+  local x2 = x1 + voxels_per_cell - 1
+  local y2 = y1 + voxels_per_cell - 1
+
+  for x=x1,x2 do
+    for y=y1,y2 do
+      if state_voxels[from_2d_voxel_idx(x, y)] != voxel_type.empty then
+        return false
+      end
+    end
+  end
+
+  return true
+end
+
+function set_cell_voxels(cell_x, cell_y, set_to)
   local x1 = (cell_x - 1) * voxels_per_cell + 1
   local y1 = (cell_y - 1) * voxels_per_cell + 1
   local x2 = x1 + voxels_per_cell - 1
@@ -75,24 +113,42 @@ function set_voxel_by_cell(cell_x, cell_y, set_to)
       local idx = from_2d_voxel_idx(x, y)
 
       if (set_to == voxel_type.empty and
-          state_voxels[idx] == voxel_type.solid) or
-      state_voxels[idx] == voxel_type.empty then
+            state_voxels[idx] == voxel_type.solid) or
+      set_to != voxel_type.empty then
         state_voxels[idx] = set_to
       end
     end
   end
 end
 
-for x=1,cell_dim_x do
-  for y=1,cell_dim_y do
-    local idx = from_2d_cell_idx(x, y)
-    state_cells[idx] = cell_type.empty
+function update_voxels_from_map(map_id)
+  for x=1,voxel_dim_x do
+    for y=1,voxel_dim_y do
+      local idx = from_2d_voxel_idx(x, y)
+
+      if state_voxels[idx] != voxel_type.water then
+        state_voxels[idx] = voxel_type.empty
+        state_voxel_horz_vel[idx] = 0
+      end
+    end
+  end
+
+  for x=1,cell_dim_x do
+    for y=1,cell_dim_y do
+      local idx = from_2d_cell_idx(x, y)
+      state_cells[idx] = cell_type.empty
+
+      local map_x, map_y = cell_to_map_pos(map_id, x, y)
+      local is_solid = fget(mget(map_x, map_y), sprite_flag.is_solid)
+
+      if is_solid then
+        set_cell_voxels(x, y, voxel_type.solid)
+      end
+    end
   end
 end
 
 function update_voxels()
-
-
   local process_limit = 432
 
   if update_counter % 10 == 0 and update_counter < 100 then
@@ -212,12 +268,22 @@ function update_input()
     state_cell_y = min(state_cell_y + 1, cell_dim_y)
   end
 
-  if btn(4) then
-    set_voxel_by_cell(state_cell_x, state_cell_y, voxel_type.solid)
+  local map_x, map_y = cell_to_map_pos(
+    state_target_map,
+    state_cell_x,
+    state_cell_y
+  )
+
+  if btn(4) and
+    are_cell_voxels_empty(state_cell_x, state_cell_y) and
+  not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
+    set_cell_voxels(state_cell_x, state_cell_y, voxel_type.solid)
+    mset(map_x, map_y, sprite.dry_earth)
   end
 
-  if btn(5) then
-    set_voxel_by_cell(state_cell_x, state_cell_y, voxel_type.empty)
+  if btn(5) and not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
+    set_cell_voxels(state_cell_x, state_cell_y, voxel_type.empty)
+    mset(map_x, map_y, sprite.empty)
   end
 end
 
@@ -227,6 +293,11 @@ function _update()
 
   update_voxels()
   update_input()
+
+  if state_loaded_map != state_target_map then
+    update_voxels_from_map(state_target_map)
+    state_loaded_map = state_target_map
+  end
 end
 
 function draw_voxel(x, y, clr1, clr2)
@@ -257,14 +328,19 @@ function draw_cell(x_cell, y_cell, clr)
   rectfill(x1, y1, x2 - 1, y2 - 1, clr)
 end
 
+function draw_map(map_id)
+  local x, y, w, h = map_id_to_pos(map_id)
+  map(x, y, 0, 0, w, h)
+end
+
 draw_counter = 1
 function _draw()
   draw_counter += 1
 
+  cls()
+
   -- seed random number so that shimmering happens at half-speed
   srand(flr(draw_counter / 2))
-
-  cls()
 
   -- draw state_voxels
   for x=1,voxel_dim_x do
@@ -272,20 +348,14 @@ function _draw()
       local vxl = state_voxels[from_2d_voxel_idx(x, y)]
       if vxl == voxel_type.water then
         draw_voxel(x, y, 12, 7)
-      elseif vxl == voxel_type.solid then
-        draw_voxel(x, y, 2, 2)
       end
     end
   end
 
-  for x=1,cell_dim_x do
-    for y=1,cell_dim_y do
-      local cell = state_cells[from_2d_cell_idx(x, y)]
-      if cell == cell_type.solid then
-        draw_cell(x, y, 4)
-      end
-    end
+  if state_loaded_map > 0 then
+    draw_map(state_loaded_map)
   end
+
   draw_cell(state_cell_x, state_cell_y, 3)
 end
 __gfx__
@@ -419,7 +489,7 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 __gff__
-0000000000000101010100000000000000000000000001010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000202020200000000000000000000000003030303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -584,4 +654,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
