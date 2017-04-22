@@ -4,7 +4,10 @@ __lua__
 
 local sprite = {
   empty=0,
-  dry_earth=1
+  earth1=1,
+  earth2=3,
+  earth3=4,
+  earth4=5
 }
 
 local sprite_flag = {
@@ -33,6 +36,7 @@ local cell_type = {
 }
 
 local state_cells = {}
+local state_cell_wetness = {}
 local state_cell_x = 1
 local state_cell_y = 1
 
@@ -85,6 +89,14 @@ function cell_to_map_pos(map_id, x, y)
   return map_x + (x - 1), map_y + (y - 1)
 end
 
+function cell_to_voxel_pos(x, y)
+  return (x - 1) * voxels_per_cell + 1, (y - 1) * voxels_per_cell + 1
+end
+
+function voxel_to_cell_pos(x, y)
+  return flr((x - 1) / voxels_per_cell) + 1, flr((y - 1) / voxels_per_cell) + 1
+end
+
 function are_cell_voxels_empty(cell_x, cell_y)
   local x1 = (cell_x - 1) * voxels_per_cell + 1
   local y1 = (cell_y - 1) * voxels_per_cell + 1
@@ -102,9 +114,43 @@ function are_cell_voxels_empty(cell_x, cell_y)
   return true
 end
 
+function wetness_chance(wetness)
+  if wetness < 2 then
+    return 1
+  else
+    return 0.03
+  end
+end
+
+function wetness_to_sprite(wetness)
+  if wetness < 5 then
+    return sprite.earth2
+  elseif wetness < 10 then
+    return sprite.earth3
+  elseif wetness < 15 then
+    return sprite.earth4
+  end
+end
+
+function soak_cell_by_voxel(voxel_x, voxel_y)
+  local x, y = voxel_to_cell_pos(voxel_x, voxel_y)
+  local idx = from_2d_cell_idx(x, y)
+  local wetness = state_cell_wetness[idx] + 1
+
+  if rnd(1) < wetness_chance(wetness) then
+    state_cell_wetness[idx] = wetness
+
+    local map_x, map_y = cell_to_map_pos(state_target_map, x, y)
+    mset(map_x, map_y, wetness_to_sprite(wetness))
+
+    return true
+  end
+
+  return false
+end
+
 function set_cell_voxels(cell_x, cell_y, set_to)
-  local x1 = (cell_x - 1) * voxels_per_cell + 1
-  local y1 = (cell_y - 1) * voxels_per_cell + 1
+  local x1, y1 = cell_to_voxel_pos(cell_x, cell_y)
   local x2 = x1 + voxels_per_cell - 1
   local y2 = y1 + voxels_per_cell - 1
 
@@ -136,7 +182,9 @@ function update_voxels_from_map(map_id)
   for x=1,cell_dim_x do
     for y=1,cell_dim_y do
       local idx = from_2d_cell_idx(x, y)
+
       state_cells[idx] = cell_type.empty
+      state_cell_wetness[idx] = 0
 
       local map_x, map_y = cell_to_map_pos(map_id, x, y)
       local is_solid = fget(mget(map_x, map_y), sprite_flag.is_solid)
@@ -151,7 +199,7 @@ end
 function update_voxels()
   local process_limit = 432
 
-  if update_counter % 10 == 0 and update_counter < 100 then
+  if update_counter % 10 == 0 then
     for x=30,40 do
       local y = 1
       local idx = from_2d_voxel_idx(x, y)
@@ -186,6 +234,12 @@ function update_voxels()
 
           state_voxel_horz_vel[idx] = 0
           state_voxel_horz_vel[idx_below] = 0
+
+        elseif voxel_below == voxel_type.solid and
+        soak_cell_by_voxel(x, y + 1) then
+
+          state_voxels[idx] = voxel_type.empty
+          state_voxel_horz_vel[idx] = 0
 
         elseif x > 1 and
           voxel_left == voxel_type.empty and rand < 0.5 and
@@ -278,7 +332,7 @@ function update_input()
     are_cell_voxels_empty(state_cell_x, state_cell_y) and
   not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
     set_cell_voxels(state_cell_x, state_cell_y, voxel_type.solid)
-    mset(map_x, map_y, sprite.dry_earth)
+    mset(map_x, map_y, sprite.earth1)
   end
 
   if btn(5) and not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
