@@ -128,11 +128,20 @@ function _update()
   update_voxel_ptr = idx
 end
 
-function draw_voxel(x, y, clr)
-  pset(x*2, y*2, clr)
-  pset(x*2, y*2+1, clr)
-  pset(x*2+1, y*2+1, clr)
-  pset(x*2+1, y*2, clr)
+function draw_voxel(x, y, clr1, clr2)
+  local rnd = rnd(1)
+
+  if rnd < 0.6 then
+    pset(x*2, y*2, clr1)
+    pset(x*2, y*2+1, clr1)
+    pset(x*2+1, y*2, clr1)
+    pset(x*2+1, y*2+1, clr1)
+  else
+    pset(x*2, y*2, clr2)
+    pset(x*2, y*2+1, clr1)
+    pset(x*2+1, y*2, clr2)
+    pset(x*2+1, y*2+1, clr1)
+  end
 end
 
 function _draw()
@@ -143,9 +152,9 @@ function _draw()
     for y=1,HEIGHT do
       local vxl = voxels[from_2d_idx(x, y)]
       if vxl == VOXEL_TYPE.WATER then
-        draw_voxel(x, y, 1)
+        draw_voxel(x, y, 12, 7)
       elseif vxl == VOXEL_TYPE.SOLID then
-        draw_voxel(x, y, 2)
+        draw_voxel(x, y, 2, 2)
       end
     end
   end
