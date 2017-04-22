@@ -245,8 +245,6 @@ function initialize_from_map(map_id)
 end
 
 function update_voxels()
-  local process_limit = 432
-
   if update_counter % 10 == 0 then
     for x=27,37 do
       local y = 1
@@ -259,6 +257,7 @@ function update_voxels()
   local idx = state_update_voxel_ptr
   local rand = rnd(1)
 
+  local process_limit = 432
   for i=1,process_limit do
     --  iterate from bottom row to top
     idx = decrement_1d_voxel_idx(idx)
@@ -291,11 +290,11 @@ function update_voxels()
 
           local wetness = soak_cell_by_voxel(x, y + 1)
 
-          if wetness_destroy(wetness) then
-            local x, y = voxel_to_cell_pos(x, y + 1)
-            set_cell_voxels(x, y, voxel_type.empty)
-          end
+          local cell_x, cell_y = voxel_to_cell_pos(x, y + 1)
 
+          if wetness_destroy(wetness) then
+            set_cell_voxels(cell_x, cell_y, voxel_type.empty)
+          end
         elseif x > 1 and
           voxel_left == voxel_type.empty and rand < 0.5 and
           (voxel_right == voxel_type.solid or
