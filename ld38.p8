@@ -2,130 +2,134 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 
-local WIDTH = 64
-local HEIGHT = 64
+local VOXEL_DIM_X = 64
+local VOXEL_DIM_Y = 64
 
 local VOXEL_TYPE = {
   EMPTY=0, SOLID=1, WATER=2
 }
 
-local voxels = {}
-local voxel_horz_vel = {}
-local update_voxel_ptr = WIDTH * HEIGHT
+local state_voxels = {}
+local state_voxel_horz_vel = {}
+local state_update_voxel_ptr = VOXEL_DIM_X * VOXEL_DIM_Y
 
-function from_2d_idx(x, y)
-  return ((x - 1) * HEIGHT) + y
+function from_2d_voxel_idx(x, y)
+  return ((x - 1) * VOXEL_DIM_Y) + y
 end
 
-function from_1d_idx(i)
-  return flr((i - 1) / HEIGHT) + 1, ((i - 1) % HEIGHT) + 1
+function from_1d_voxel_idx(i)
+  return flr((i - 1) / VOXEL_DIM_Y) + 1, ((i - 1) % VOXEL_DIM_Y) + 1
 end
 
-function decrement_1d_idx(ptr)
-  return (ptr - 2) % (WIDTH * HEIGHT) + 1
+function decrement_1d_voxel_idx(ptr)
+  return (ptr - 2) % (VOXEL_DIM_X * VOXEL_DIM_Y) + 1
 end
 
 function run_tests()
-  assert(from_2d_idx(1, 1) == 1)
-  assert(from_2d_idx(3, 2) == 130)
-  assert(from_2d_idx(3, 3) == 131)
+  assert(from_2d_voxel_idx(1, 1) == 1)
+  assert(from_2d_voxel_idx(3, 2) == 130)
+  assert(from_2d_voxel_idx(3, 3) == 131)
 
-  local x, y = from_1d_idx(130)
+  local x, y = from_1d_voxel_idx(130)
   assert(x == 3 and y == 2)
 
-  local x, y = from_1d_idx(131)
+  local x, y = from_1d_voxel_idx(131)
   assert(x == 3 and y == 3)
 
-  assert(decrement_1d_idx(1) == WIDTH * HEIGHT)
-  assert(decrement_1d_idx(WIDTH * HEIGHT) == WIDTH * HEIGHT - 1)
+  assert(decrement_1d_voxel_idx(1) == VOXEL_DIM_X * VOXEL_DIM_Y)
+  assert(decrement_1d_voxel_idx(VOXEL_DIM_X * VOXEL_DIM_Y) == VOXEL_DIM_X * VOXEL_DIM_Y - 1)
 end
 
 run_tests()
 
-for x=1,WIDTH do
-  for y=1,HEIGHT do
-    local idx = from_2d_idx(x, y)
-    voxels[idx] = VOXEL_TYPE.EMPTY
+for x=1,VOXEL_DIM_X do
+  for y=1,VOXEL_DIM_Y do
+    local idx = from_2d_voxel_idx(x, y)
+    state_voxels[idx] = VOXEL_TYPE.EMPTY
 
     if (x == 30 and y == 40) or (x > 16 and x < 50 and y == 41) then
-      voxels[idx] = VOXEL_TYPE.SOLID
+      state_voxels[idx] = VOXEL_TYPE.SOLID
     end
 
-    voxel_horz_vel[idx] = 0
+    state_voxel_horz_vel[idx] = 0
   end
 end
 
 local counter = 1
-function _update()
+function update_voxels()
   local PROCESS_LIMIT = 1987
 
   if counter % 10 == 0 and counter < 100 then
-    for x=1,WIDTH do
+    for x=1,VOXEL_DIM_X do
       local y = 1
-      local idx = from_2d_idx(x, y)
+      local idx = from_2d_voxel_idx(x, y)
 
-      voxels[idx] = VOXEL_TYPE.WATER
+      state_voxels[idx] = VOXEL_TYPE.WATER
     end
   end
   counter += 1
 
-  local idx = update_voxel_ptr
+  local idx = state_update_voxel_ptr
   for i=1,PROCESS_LIMIT do
     --  iterate from bottom row to top
-    idx = decrement_1d_idx(idx)
+    idx = decrement_1d_voxel_idx(idx)
 
-    local x, y = from_1d_idx(idx)
-    local idx_below = from_2d_idx(x, y + 1)
-    local idx_left = from_2d_idx(x - 1, y)
-    local idx_right = from_2d_idx(x + 1, y)
+    local x, y = from_1d_voxel_idx(idx)
+    local idx_below = from_2d_voxel_idx(x, y + 1)
+    local idx_left = from_2d_voxel_idx(x - 1, y)
+    local idx_right = from_2d_voxel_idx(x + 1, y)
     local rand = rnd(1)
 
-    if voxels[idx] == VOXEL_TYPE.WATER then
-      if y < HEIGHT then
-        if voxels[idx_below] == VOXEL_TYPE.EMPTY then
+    if state_voxels[idx] == VOXEL_TYPE.WATER then
+      if y < VOXEL_DIM_Y then
+        if state_voxels[idx_below] == VOXEL_TYPE.EMPTY then
 
-          voxels[idx] = VOXEL_TYPE.EMPTY
-          voxels[idx_below] = VOXEL_TYPE.WATER
+          state_voxels[idx] = VOXEL_TYPE.EMPTY
+          state_voxels[idx_below] = VOXEL_TYPE.WATER
 
-          voxel_horz_vel[idx] = 0
-          voxel_horz_vel[idx_below] = 0
+          state_voxel_horz_vel[idx] = 0
+          state_voxel_horz_vel[idx_below] = 0
 
         elseif x > 1 and
-          voxels[idx_left] == VOXEL_TYPE.EMPTY and
-          (voxels[idx_right] == VOXEL_TYPE.SOLID or
-             voxels[idx_right] == VOXEL_TYPE.WATER or
-             voxel_horz_vel[idx] == -1)
+          state_voxels[idx_left] == VOXEL_TYPE.EMPTY and
+          (state_voxels[idx_right] == VOXEL_TYPE.SOLID or
+             state_voxels[idx_right] == VOXEL_TYPE.WATER or
+             state_voxel_horz_vel[idx] == -1)
         then
 
-          voxels[idx] = VOXEL_TYPE.EMPTY
-          voxels[idx_left] = VOXEL_TYPE.WATER
+          state_voxels[idx] = VOXEL_TYPE.EMPTY
+          state_voxels[idx_left] = VOXEL_TYPE.WATER
 
-          voxel_horz_vel[idx_left] = -1
-          voxel_horz_vel[idx] = 0
+          state_voxel_horz_vel[idx_left] = -1
+          state_voxel_horz_vel[idx] = 0
 
-        elseif x < WIDTH and
-          voxels[idx_right] == VOXEL_TYPE.EMPTY and
-          (voxels[idx_left] == VOXEL_TYPE.SOLID or
-             voxels[idx_left] == VOXEL_TYPE.WATER or
-             voxel_horz_vel[idx] == 1)
+        elseif x < VOXEL_DIM_X and
+          state_voxels[idx_right] == VOXEL_TYPE.EMPTY and
+          (state_voxels[idx_left] == VOXEL_TYPE.SOLID or
+             state_voxels[idx_left] == VOXEL_TYPE.WATER or
+             state_voxel_horz_vel[idx] == 1)
         then
 
-          voxels[idx] = VOXEL_TYPE.EMPTY
-          voxels[idx_right] = VOXEL_TYPE.WATER
+          state_voxels[idx] = VOXEL_TYPE.EMPTY
+          state_voxels[idx_right] = VOXEL_TYPE.WATER
 
-          voxel_horz_vel[idx_right] = 1
-          voxel_horz_vel[idx] = 0
+          state_voxel_horz_vel[idx_right] = 1
+          state_voxel_horz_vel[idx] = 0
 
         end
       else
-        voxels[idx] = VOXEL_TYPE.EMPTY
+        state_voxels[idx] = VOXEL_TYPE.EMPTY
 
-        voxel_horz_vel[idx] = 0
+        state_voxel_horz_vel[idx] = 0
       end
     end
   end
 
-  update_voxel_ptr = idx
+  state_update_voxel_ptr = idx
+end
+
+function _update()
+  update_voxels()
 end
 
 function draw_voxel(x, y, clr1, clr2)
@@ -147,10 +151,10 @@ end
 function _draw()
   cls()
 
-  -- draw voxels
-  for x=1,WIDTH do
-    for y=1,HEIGHT do
-      local vxl = voxels[from_2d_idx(x, y)]
+  -- draw state_voxels
+  for x=1,VOXEL_DIM_X do
+    for y=1,VOXEL_DIM_Y do
+      local vxl = state_voxels[from_2d_voxel_idx(x, y)]
       if vxl == VOXEL_TYPE.WATER then
         draw_voxel(x, y, 12, 7)
       elseif vxl == VOXEL_TYPE.SOLID then
