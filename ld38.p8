@@ -138,10 +138,10 @@ function wetness_chance(wetness)
 end
 
 function wetness_to_sprite(wetness, is_roots, is_flower)
-  if wetness < 5 then
+  if wetness < 3 then
     return (is_roots and sprite.plant_earth2) or
       (is_flower and sprite.plant_flower2) or sprite.earth2
-  elseif wetness < 10 then
+  elseif wetness < 6 then
     return (is_roots and sprite.plant_earth3) or
       (is_flower and sprite.plant_flower3) or sprite.earth3
   else
@@ -151,7 +151,7 @@ function wetness_to_sprite(wetness, is_roots, is_flower)
 end
 
 function wetness_victory(wetness)
-  return wetness >= 5 and wetness < 10
+  return wetness >= 3 and wetness < 6
 end
 
 function wetness_destroy(wetness)
