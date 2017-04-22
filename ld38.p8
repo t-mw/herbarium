@@ -24,8 +24,8 @@ local cell_type = {
 }
 
 local state_cells = {}
-local state_x_cell = 1
-local state_y_cell = 1
+local state_cell_x = 1
+local state_cell_y = 1
 
 function from_2d_voxel_idx(x, y)
   return ((x - 1) * voxel_dim_y) + y
@@ -64,11 +64,22 @@ end
 
 run_tests()
 
-for x=1,voxel_dim_x do
-  for y=1,voxel_dim_y do
-    local idx = from_2d_voxel_idx(x, y)
-    state_voxels[idx] = voxel_type.empty
-    state_voxel_horz_vel[idx] = 0
+function set_voxel_by_cell(cell_x, cell_y, set_to)
+  local x1 = (cell_x - 1) * voxels_per_cell + 1
+  local y1 = (cell_y - 1) * voxels_per_cell + 1
+  local x2 = x1 + voxels_per_cell - 1
+  local y2 = y1 + voxels_per_cell - 1
+
+  for x=x1,x2 do
+    for y=y1,y2 do
+      local idx = from_2d_voxel_idx(x, y)
+
+      if (set_to == voxel_type.empty and
+          state_voxels[idx] == voxel_type.solid) or
+      state_voxels[idx] == voxel_type.empty then
+        state_voxels[idx] = set_to
+      end
+    end
   end
 end
 
@@ -79,13 +90,12 @@ for x=1,cell_dim_x do
   end
 end
 
-local counter = 1
 function update_voxels()
-  counter += 1
+
 
   local process_limit = 432
 
-  if counter % 10 == 0 and counter < 100 then
+  if update_counter % 10 == 0 and update_counter < 100 then
     for x=30,40 do
       local y = 1
       local idx = from_2d_voxel_idx(x, y)
@@ -190,38 +200,24 @@ end
 
 function update_input()
   if btnp_dir_custom(0) then
-    state_x_cell = max(state_x_cell - 1, 1)
+    state_cell_x = max(state_cell_x - 1, 1)
   end
   if btnp_dir_custom(1) then
-    state_x_cell = min(state_x_cell + 1, cell_dim_x)
+    state_cell_x = min(state_cell_x + 1, cell_dim_x)
   end
   if btnp_dir_custom(2) then
-    state_y_cell = max(state_y_cell - 1, 1)
+    state_cell_y = max(state_cell_y - 1, 1)
   end
   if btnp_dir_custom(3) then
-    state_y_cell = min(state_y_cell + 1, cell_dim_y)
+    state_cell_y = min(state_cell_y + 1, cell_dim_y)
   end
 
-  if btn(4) or btn(5) then
-    local idx = from_2d_cell_idx(state_x_cell, state_y_cell)
+  if btn(4) then
+    set_voxel_by_cell(state_cell_x, state_cell_y, voxel_type.solid)
+  end
 
-    local x1 = (state_x_cell - 1) * voxels_per_cell + 1
-    local y1 = (state_y_cell - 1) * voxels_per_cell + 1
-    local x2 = x1 + voxels_per_cell - 1
-    local y2 = y1 + voxels_per_cell - 1
-
-    for x=x1,x2 do
-      for y=y1,y2 do
-        local idx = from_2d_voxel_idx(x, y)
-
-        if btn(4) and state_voxels[idx] == voxel_type.empty then
-          state_voxels[idx] = voxel_type.solid
-        elseif btn(5) and state_voxels[idx] == voxel_type.solid then
-          state_voxels[idx] = voxel_type.empty
-        end
-      end
-    end
-    -- state_cells[idx] = cell_type.solid
+  if btn(5) then
+    set_voxel_by_cell(state_cell_x, state_cell_y, voxel_type.empty)
   end
 end
 
@@ -290,7 +286,7 @@ function _draw()
       end
     end
   end
-  draw_cell(state_x_cell, state_y_cell, 3)
+  draw_cell(state_cell_x, state_cell_y, 3)
 end
 __gfx__
 0000000049999999999999994444444433333333ddd3dddd000000000000000000a0aa0000000000000000000000000000000000000000000000000000000000
