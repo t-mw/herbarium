@@ -50,6 +50,7 @@ local cell_type = {
 local state_cells = {}
 local state_cell_wetness = {}
 local state_cell_is_roots = {}
+local state_root_cell_indices = {}
 
 local state_cell_x = 1
 local state_cell_y = 1
@@ -149,6 +150,10 @@ function wetness_to_sprite(wetness, is_roots, is_flower)
   end
 end
 
+function wetness_victory(wetness)
+  return wetness >= 5 and wetness < 10
+end
+
 function wetness_destroy(wetness)
   return wetness > 15
 end
@@ -238,8 +243,12 @@ function initialize_from_map(map_id)
         set_cell_voxels(x, y, voxel_type.solid)
       end
 
-      state_cell_is_roots[idx] =
-        fget(mget(map_x, map_y), sprite_flag.is_roots)
+      local is_roots = fget(mget(map_x, map_y), sprite_flag.is_roots)
+      state_cell_is_roots[idx] = is_roots
+
+      if is_roots then
+        add(state_root_cell_indices, idx)
+      end
     end
   end
 end
@@ -335,6 +344,20 @@ function update_voxels()
   state_update_voxel_ptr = idx
 end
 
+function check_victory_condition()
+  local victory = true
+
+  for cell_idx in all(state_root_cell_indices) do
+    if not wetness_victory(state_cell_wetness[cell_idx]) then
+      victory = false
+    end
+  end
+
+  if victory then
+    printh("victory")
+  end
+end
+
 local state_keys_prev_down = {}
 function btnp_dir_custom(key)
   local delay = 4
@@ -398,13 +421,15 @@ update_counter = 1
 function _update()
   update_counter += 1
 
-  update_voxels()
-  update_input()
-
   if state_loaded_map != state_target_map then
     initialize_from_map(state_target_map)
     state_loaded_map = state_target_map
   end
+
+  update_voxels()
+  update_input()
+
+  check_victory_condition()
 end
 
 function draw_voxel(x, y, clr1, clr2)
