@@ -2,25 +2,25 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 
-local VOXEL_PX_SIZE = 2
-local VOXEL_DIM_X = 128 / VOXEL_PX_SIZE
-local VOXEL_DIM_Y = 128 / VOXEL_PX_SIZE
+local voxel_px_size = 2
+local voxel_dim_x = 128 / voxel_px_size
+local voxel_dim_y = 128 / voxel_px_size
 
-local VOXEL_TYPE = {
-  EMPTY=0, SOLID=1, WATER=2
+local voxel_type = {
+  empty=0, solid=1, water=2
 }
 
 local state_voxels = {}
 local state_voxel_horz_vel = {}
-local state_update_voxel_ptr = VOXEL_DIM_X * VOXEL_DIM_Y
+local state_update_voxel_ptr = voxel_dim_x * voxel_dim_y
 
-local VOXELS_PER_CELL = 2
-local CELL_PX_SIZE = VOXEL_PX_SIZE * VOXELS_PER_CELL
-local CELL_DIM_X = VOXEL_DIM_X / VOXELS_PER_CELL
-local CELL_DIM_Y = VOXEL_DIM_Y / VOXELS_PER_CELL
+local voxels_per_cell = 2
+local cell_px_size = voxel_px_size * voxels_per_cell
+local cell_dim_x = voxel_dim_x / voxels_per_cell
+local cell_dim_y = voxel_dim_y / voxels_per_cell
 
-local CELL_TYPE = {
-  EMPTY=0, SOLID
+local cell_type = {
+  empty=0, solid
 }
 
 local state_cells = {}
@@ -28,23 +28,23 @@ local state_x_cell = 1
 local state_y_cell = 1
 
 function from_2d_voxel_idx(x, y)
-  return ((x - 1) * VOXEL_DIM_Y) + y
+  return ((x - 1) * voxel_dim_y) + y
 end
 
 function from_1d_voxel_idx(i)
-  return flr((i - 1) / VOXEL_DIM_Y) + 1, ((i - 1) % VOXEL_DIM_Y) + 1
+  return flr((i - 1) / voxel_dim_y) + 1, ((i - 1) % voxel_dim_y) + 1
 end
 
 function decrement_1d_voxel_idx(ptr)
-  return (ptr - 2) % (VOXEL_DIM_X * VOXEL_DIM_Y) + 1
+  return (ptr - 2) % (voxel_dim_x * voxel_dim_y) + 1
 end
 
 function from_2d_cell_idx(x, y)
-  return ((x - 1) * CELL_DIM_Y) + y
+  return ((x - 1) * cell_dim_y) + y
 end
 
 function from_1d_cell_idx(i)
-  return flr((i - 1) / CELL_DIM_Y) + 1, ((i - 1) % CELL_DIM_Y) + 1
+  return flr((i - 1) / cell_dim_y) + 1, ((i - 1) % cell_dim_y) + 1
 end
 
 function run_tests()
@@ -58,24 +58,24 @@ function run_tests()
   local x, y = from_1d_voxel_idx(131)
   assert(x == 3 and y == 3)
 
-  assert(decrement_1d_voxel_idx(1) == VOXEL_DIM_X * VOXEL_DIM_Y)
-  assert(decrement_1d_voxel_idx(VOXEL_DIM_X * VOXEL_DIM_Y) == VOXEL_DIM_X * VOXEL_DIM_Y - 1)
+  assert(decrement_1d_voxel_idx(1) == voxel_dim_x * voxel_dim_y)
+  assert(decrement_1d_voxel_idx(voxel_dim_x * voxel_dim_y) == voxel_dim_x * voxel_dim_y - 1)
 end
 
 run_tests()
 
-for x=1,VOXEL_DIM_X do
-  for y=1,VOXEL_DIM_Y do
+for x=1,voxel_dim_x do
+  for y=1,voxel_dim_y do
     local idx = from_2d_voxel_idx(x, y)
-    state_voxels[idx] = VOXEL_TYPE.EMPTY
+    state_voxels[idx] = voxel_type.empty
     state_voxel_horz_vel[idx] = 0
   end
 end
 
-for x=1,CELL_DIM_X do
-  for y=1,CELL_DIM_Y do
+for x=1,cell_dim_x do
+  for y=1,cell_dim_y do
     local idx = from_2d_cell_idx(x, y)
-    state_cells[idx] = CELL_TYPE.EMPTY
+    state_cells[idx] = cell_type.empty
   end
 end
 
@@ -83,21 +83,21 @@ local counter = 1
 function update_voxels()
   counter += 1
 
-  local PROCESS_LIMIT = 432
+  local process_limit = 432
 
   if counter % 10 == 0 and counter < 100 then
     for x=30,40 do
       local y = 1
       local idx = from_2d_voxel_idx(x, y)
 
-      state_voxels[idx] = VOXEL_TYPE.WATER
+      state_voxels[idx] = voxel_type.water
     end
   end
 
   local idx = state_update_voxel_ptr
   local rand = rnd(1)
 
-  for i=1,PROCESS_LIMIT do
+  for i=1,process_limit do
     --  iterate from bottom row to top
     idx = decrement_1d_voxel_idx(idx)
 
@@ -111,47 +111,47 @@ function update_voxels()
     local voxel_left = state_voxels[idx_left]
     local voxel_right = state_voxels[idx_right]
 
-    if state_voxels[idx] == VOXEL_TYPE.WATER then
-      if y < VOXEL_DIM_Y then
-        if voxel_below == VOXEL_TYPE.EMPTY then
+    if state_voxels[idx] == voxel_type.water then
+      if y < voxel_dim_y then
+        if voxel_below == voxel_type.empty then
 
-          state_voxels[idx] = VOXEL_TYPE.EMPTY
-          state_voxels[idx_below] = VOXEL_TYPE.WATER
+          state_voxels[idx] = voxel_type.empty
+          state_voxels[idx_below] = voxel_type.water
 
           state_voxel_horz_vel[idx] = 0
           state_voxel_horz_vel[idx_below] = 0
 
         elseif x > 1 and
-          voxel_left == VOXEL_TYPE.EMPTY and rand < 0.5 and
-          (voxel_right == VOXEL_TYPE.SOLID or
-             voxel_below == VOXEL_TYPE.SOLID or
-             voxel_right == VOXEL_TYPE.WATER or
+          voxel_left == voxel_type.empty and rand < 0.5 and
+          (voxel_right == voxel_type.solid or
+             voxel_below == voxel_type.solid or
+             voxel_right == voxel_type.water or
              state_voxel_horz_vel[idx] == -1)
         then
 
-          state_voxels[idx] = VOXEL_TYPE.EMPTY
-          state_voxels[idx_left] = VOXEL_TYPE.WATER
+          state_voxels[idx] = voxel_type.empty
+          state_voxels[idx_left] = voxel_type.water
 
           state_voxel_horz_vel[idx_left] = -1
           state_voxel_horz_vel[idx] = 0
 
-        elseif x < VOXEL_DIM_X and
-          voxel_right == VOXEL_TYPE.EMPTY and rand > 0.5 and
-          (voxel_left == VOXEL_TYPE.SOLID or
-             voxel_below == VOXEL_TYPE.SOLID or
-             voxel_left == VOXEL_TYPE.WATER or
+        elseif x < voxel_dim_x and
+          voxel_right == voxel_type.empty and rand > 0.5 and
+          (voxel_left == voxel_type.solid or
+             voxel_below == voxel_type.solid or
+             voxel_left == voxel_type.water or
              state_voxel_horz_vel[idx] == 1)
         then
 
-          state_voxels[idx] = VOXEL_TYPE.EMPTY
-          state_voxels[idx_right] = VOXEL_TYPE.WATER
+          state_voxels[idx] = voxel_type.empty
+          state_voxels[idx_right] = voxel_type.water
 
           state_voxel_horz_vel[idx_right] = 1
           state_voxel_horz_vel[idx] = 0
 
         end
       else
-        state_voxels[idx] = VOXEL_TYPE.EMPTY
+        state_voxels[idx] = voxel_type.empty
 
         state_voxel_horz_vel[idx] = 0
       end
@@ -164,7 +164,7 @@ end
 
 local state_keys_prev_down = {}
 function btnp_dir_custom(key)
-  local DELAY = 4
+  local delay = 4
 
   local key_str = ""..key
 
@@ -185,7 +185,7 @@ function btnp_dir_custom(key)
     end
   end
 
-  return any or (update_counter - state_keys_prev_down[key_str]) >= DELAY
+  return any or (update_counter - state_keys_prev_down[key_str]) >= delay
 end
 
 function update_input()
@@ -193,35 +193,35 @@ function update_input()
     state_x_cell = max(state_x_cell - 1, 1)
   end
   if btnp_dir_custom(1) then
-    state_x_cell = min(state_x_cell + 1, CELL_DIM_X)
+    state_x_cell = min(state_x_cell + 1, cell_dim_x)
   end
   if btnp_dir_custom(2) then
     state_y_cell = max(state_y_cell - 1, 1)
   end
   if btnp_dir_custom(3) then
-    state_y_cell = min(state_y_cell + 1, CELL_DIM_Y)
+    state_y_cell = min(state_y_cell + 1, cell_dim_y)
   end
 
   if btn(4) or btn(5) then
     local idx = from_2d_cell_idx(state_x_cell, state_y_cell)
 
-    local x1 = (state_x_cell - 1) * VOXELS_PER_CELL + 1
-    local y1 = (state_y_cell - 1) * VOXELS_PER_CELL + 1
-    local x2 = x1 + VOXELS_PER_CELL - 1
-    local y2 = y1 + VOXELS_PER_CELL - 1
+    local x1 = (state_x_cell - 1) * voxels_per_cell + 1
+    local y1 = (state_y_cell - 1) * voxels_per_cell + 1
+    local x2 = x1 + voxels_per_cell - 1
+    local y2 = y1 + voxels_per_cell - 1
 
     for x=x1,x2 do
       for y=y1,y2 do
         local idx = from_2d_voxel_idx(x, y)
 
-        if btn(4) and state_voxels[idx] == VOXEL_TYPE.EMPTY then
-          state_voxels[idx] = VOXEL_TYPE.SOLID
-        elseif btn(5) and state_voxels[idx] == VOXEL_TYPE.SOLID then
-          state_voxels[idx] = VOXEL_TYPE.EMPTY
+        if btn(4) and state_voxels[idx] == voxel_type.empty then
+          state_voxels[idx] = voxel_type.solid
+        elseif btn(5) and state_voxels[idx] == voxel_type.solid then
+          state_voxels[idx] = voxel_type.empty
         end
       end
     end
-    -- state_cells[idx] = CELL_TYPE.SOLID
+    -- state_cells[idx] = cell_type.solid
   end
 end
 
@@ -240,19 +240,19 @@ function draw_voxel(x, y, clr1, clr2)
   y = y - 1
 
   if rnd < 0.6 then
-    rectfill(x * VOXEL_PX_SIZE, y * VOXEL_PX_SIZE,
-             (x + 1) * VOXEL_PX_SIZE - 1, (y + 1) * VOXEL_PX_SIZE - 1, clr1)
+    rectfill(x * voxel_px_size, y * voxel_px_size,
+             (x + 1) * voxel_px_size - 1, (y + 1) * voxel_px_size - 1, clr1)
   else
-    rectfill(x * VOXEL_PX_SIZE, y * VOXEL_PX_SIZE,
-             (x + 1) * VOXEL_PX_SIZE - 1, (y + 1) * VOXEL_PX_SIZE - 1, clr1)
+    rectfill(x * voxel_px_size, y * voxel_px_size,
+             (x + 1) * voxel_px_size - 1, (y + 1) * voxel_px_size - 1, clr1)
     pset(x*2, y*2, clr2)
     pset(x*2+1, y*2, clr2)
   end
 end
 
 function get_cell_screen_pos(x_cell, y_cell)
-  return (x_cell - 1) * CELL_PX_SIZE,
-         (y_cell - 1) * CELL_PX_SIZE
+  return (x_cell - 1) * cell_px_size,
+         (y_cell - 1) * cell_px_size
 end
 
 function draw_cell(x_cell, y_cell, clr)
@@ -271,21 +271,21 @@ function _draw()
   cls()
 
   -- draw state_voxels
-  for x=1,VOXEL_DIM_X do
-    for y=1,VOXEL_DIM_Y do
+  for x=1,voxel_dim_x do
+    for y=1,voxel_dim_y do
       local vxl = state_voxels[from_2d_voxel_idx(x, y)]
-      if vxl == VOXEL_TYPE.WATER then
+      if vxl == voxel_type.water then
         draw_voxel(x, y, 12, 7)
-      elseif vxl == VOXEL_TYPE.SOLID then
+      elseif vxl == voxel_type.solid then
         draw_voxel(x, y, 2, 2)
       end
     end
   end
 
-  for x=1,CELL_DIM_X do
-    for y=1,CELL_DIM_Y do
+  for x=1,cell_dim_x do
+    for y=1,cell_dim_y do
       local cell = state_cells[from_2d_cell_idx(x, y)]
-      if cell == CELL_TYPE.SOLID then
+      if cell == cell_type.solid then
         draw_cell(x, y, 4)
       end
     end
