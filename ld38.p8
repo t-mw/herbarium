@@ -115,7 +115,7 @@ function are_cell_voxels_empty(cell_x, cell_y)
 end
 
 function wetness_chance(wetness)
-  if wetness < 2 then
+  if wetness == 0 then
     return 1
   else
     return 0.03
@@ -127,9 +127,24 @@ function wetness_to_sprite(wetness)
     return sprite.earth2
   elseif wetness < 10 then
     return sprite.earth3
-  elseif wetness < 15 then
+  else
     return sprite.earth4
   end
+end
+
+function wetness_destroy(wetness)
+  return wetness > 15
+end
+
+function should_soak_cell_by_voxel(voxel_x, voxel_y)
+  local x, y = voxel_to_cell_pos(voxel_x, voxel_y)
+  local idx = from_2d_cell_idx(x, y)
+
+  if rnd(1) < wetness_chance(state_cell_wetness[idx]) then
+    return true
+  end
+
+  return false
 end
 
 function soak_cell_by_voxel(voxel_x, voxel_y)
@@ -137,16 +152,17 @@ function soak_cell_by_voxel(voxel_x, voxel_y)
   local idx = from_2d_cell_idx(x, y)
   local wetness = state_cell_wetness[idx] + 1
 
-  if rnd(1) < wetness_chance(wetness) then
-    state_cell_wetness[idx] = wetness
+  state_cell_wetness[idx] = wetness
 
-    local map_x, map_y = cell_to_map_pos(state_target_map, x, y)
+  local map_x, map_y = cell_to_map_pos(state_target_map, x, y)
+
+  if wetness_destroy(wetness) then
+    mset(map_x, map_y, 0)
+  else
     mset(map_x, map_y, wetness_to_sprite(wetness))
-
-    return true
   end
 
-  return false
+  return wetness
 end
 
 function set_cell_voxels(cell_x, cell_y, set_to)
@@ -162,6 +178,10 @@ function set_cell_voxels(cell_x, cell_y, set_to)
             state_voxels[idx] == voxel_type.solid) or
       set_to != voxel_type.empty then
         state_voxels[idx] = set_to
+
+        if voxel_type.empty then
+          state_voxel_horz_vel[idx] = 0
+        end
       end
     end
   end
@@ -236,10 +256,17 @@ function update_voxels()
           state_voxel_horz_vel[idx_below] = 0
 
         elseif voxel_below == voxel_type.solid and
-        soak_cell_by_voxel(x, y + 1) then
+        should_soak_cell_by_voxel(x, y + 1) then
 
           state_voxels[idx] = voxel_type.empty
           state_voxel_horz_vel[idx] = 0
+
+          local wetness = soak_cell_by_voxel(x, y + 1)
+
+          if wetness_destroy(wetness) then
+            local x, y = voxel_to_cell_pos(x, y + 1)
+            set_cell_voxels(x, y, voxel_type.empty)
+          end
 
         elseif x > 1 and
           voxel_left == voxel_type.empty and rand < 0.5 and
