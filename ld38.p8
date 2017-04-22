@@ -57,7 +57,7 @@ end
 
 local counter = 1
 function update_voxels()
-  local PROCESS_LIMIT = 1987
+  local PROCESS_LIMIT = 432
 
   if counter % 10 == 0 and counter < 100 then
     for x=1,VOXEL_DIM_X do
@@ -78,7 +78,6 @@ function update_voxels()
     local idx_below = from_2d_voxel_idx(x, y + 1)
     local idx_left = from_2d_voxel_idx(x - 1, y)
     local idx_right = from_2d_voxel_idx(x + 1, y)
-    local rand = rnd(1)
 
     if state_voxels[idx] == VOXEL_TYPE.WATER then
       if y < VOXEL_DIM_Y then
@@ -148,7 +147,13 @@ function draw_voxel(x, y, clr1, clr2)
   end
 end
 
+local draw_counter = 1
 function _draw()
+  draw_counter += 1
+
+  -- seed random number so that shimmering happens at half-speed
+  srand(flr(draw_counter / 2))
+
   cls()
 
   -- draw state_voxels
