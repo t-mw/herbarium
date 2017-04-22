@@ -7,11 +7,18 @@ local sprite = {
   earth1=1,
   earth2=3,
   earth3=4,
-  earth4=5
+  earth4=5,
+
+  plant_earth1=22,
+  plant_earth2=23,
+  plant_earth3=24,
+  plant_earth4=25
 }
 
 local sprite_flag = {
-  is_solid=0, is_frozen=1
+  is_solid=0,
+  is_frozen=1,
+  is_roots=2
 }
 
 local voxel_px_size = 2
@@ -37,6 +44,7 @@ local cell_type = {
 
 local state_cells = {}
 local state_cell_wetness = {}
+local state_cell_is_roots = {}
 local state_cell_x = 1
 local state_cell_y = 1
 
@@ -122,13 +130,13 @@ function wetness_chance(wetness)
   end
 end
 
-function wetness_to_sprite(wetness)
+function wetness_to_sprite(wetness, is_roots)
   if wetness < 5 then
-    return sprite.earth2
+    return is_roots and sprite.plant_earth2 or sprite.earth2
   elseif wetness < 10 then
-    return sprite.earth3
+    return is_roots and sprite.plant_earth3 or sprite.earth3
   else
-    return sprite.earth4
+    return is_roots and sprite.plant_earth4 or sprite.earth4
   end
 end
 
@@ -159,7 +167,7 @@ function soak_cell_by_voxel(voxel_x, voxel_y)
   if wetness_destroy(wetness) then
     mset(map_x, map_y, 0)
   else
-    mset(map_x, map_y, wetness_to_sprite(wetness))
+    mset(map_x, map_y, wetness_to_sprite(wetness, state_cell_is_roots[idx]))
   end
 
   return wetness
@@ -187,7 +195,7 @@ function set_cell_voxels(cell_x, cell_y, set_to)
   end
 end
 
-function update_voxels_from_map(map_id)
+function initialize_from_map(map_id)
   for x=1,voxel_dim_x do
     for y=1,voxel_dim_y do
       local idx = from_2d_voxel_idx(x, y)
@@ -212,6 +220,9 @@ function update_voxels_from_map(map_id)
       if is_solid then
         set_cell_voxels(x, y, voxel_type.solid)
       end
+
+      local is_roots = fget(mget(map_x, map_y), sprite_flag.is_roots)
+      state_cell_is_roots[idx] = is_roots
     end
   end
 end
@@ -220,7 +231,7 @@ function update_voxels()
   local process_limit = 432
 
   if update_counter % 10 == 0 then
-    for x=30,40 do
+    for x=27,37 do
       local y = 1
       local idx = from_2d_voxel_idx(x, y)
 
@@ -308,7 +319,6 @@ function update_voxels()
   state_update_voxel_ptr = idx
 end
 
-
 local state_keys_prev_down = {}
 function btnp_dir_custom(key)
   local delay = 4
@@ -376,7 +386,7 @@ function _update()
   update_input()
 
   if state_loaded_map != state_target_map then
-    update_voxels_from_map(state_target_map)
+    initialize_from_map(state_target_map)
     state_loaded_map = state_target_map
   end
 end
@@ -570,7 +580,7 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 __gff__
-0000000000000202020200000000000000000000000003030303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000202020200000000000000000000000007070707000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
