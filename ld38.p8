@@ -122,7 +122,7 @@ function map_id_to_pos(id)
 end
 
 function is_victory_map(map_id)
-  return map_id > 2
+  return map_id > 5
 end
 
 function cell_to_map_pos(map_id, x, y)
