@@ -572,18 +572,21 @@ function draw_map(map_id)
   map(x, y, 0, 0, w, h)
 end
 
-function draw_restart_message(x, y)
+function draw_restart_message()
   local msg = ""
+  local x = 127
 
   if state_restarting then
     for i=1,flr(state_restart_countdown / 10) do
       msg = msg.."™"
+      x -= 6
     end
   else
     msg = "restart: —+Ž"
+    x -= 55
   end
 
-  print(msg, x, y)
+  print(msg, x, 120, 7)
 end
 
 function draw_flower(scale)
@@ -621,7 +624,7 @@ function _draw()
     draw_cell(state_cell_x, state_cell_y, 8)
   end
 
-  draw_restart_message(0, 120)
+  draw_restart_message()
 
   if state_mode == game_mode.start then
     cls()
@@ -946,4 +949,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
