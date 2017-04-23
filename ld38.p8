@@ -47,6 +47,8 @@ local cell_type = {
   empty=0, solid
 }
 
+local user_map = 16
+
 local state_cells = {}
 local state_cell_wetness = {}
 local state_cell_is_roots = {}
@@ -71,6 +73,11 @@ local victory_countdown_splash_start = 40
 
 local state_mode = game_mode.start
 local state_countdown = max_start_countdown
+
+local max_restart_countdown = 40
+
+local state_restarting = false
+local state_restart_countdown = max_restart_countdown
 
 function from_2d_voxel_idx(x, y)
   return ((x - 1) * voxel_dim_y) + y
@@ -110,7 +117,7 @@ end
 run_tests()
 
 function map_id_to_pos(id)
-  return (id - 1) * 16, 0, 16, 16
+  return ((id - 1) % 8) * 16, flr((id - 1) / 8) * 16, 16, 16
 end
 
 function is_victory_map(map_id)
@@ -194,7 +201,7 @@ function soak_cell_by_voxel(voxel_x, voxel_y)
 
   state_cell_wetness[idx] = wetness
 
-  local map_x, map_y = cell_to_map_pos(state_target_map, x, y)
+  local map_x, map_y = cell_to_map_pos(user_map, x, y)
 
   if wetness_destroy(wetness) then
     mset(map_x, map_y, 0)
@@ -255,6 +262,11 @@ function initialize_from_map(map_id)
       state_cell_wetness[idx] = 0
 
       local map_x, map_y = cell_to_map_pos(map_id, x, y)
+      local user_map_x, user_map_y = cell_to_map_pos(user_map, x, y)
+
+      -- copy map to user map
+      mset(user_map_x, user_map_y, mget(map_x, map_y))
+
       local is_solid = fget(mget(map_x, map_y), sprite_flag.is_solid)
 
       if is_solid then
@@ -418,22 +430,30 @@ function update_input()
     state_cell_y = min(state_cell_y + 1, cell_dim_y)
   end
 
-  local map_x, map_y = cell_to_map_pos(
-    state_target_map,
-    state_cell_x,
-    state_cell_y
-  )
+  local map_x, map_y = cell_to_map_pos(user_map, state_cell_x, state_cell_y)
 
-  if btn(4) and
-    are_cell_voxels_empty(state_cell_x, state_cell_y) and
-  not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
-    set_cell_voxels(state_cell_x, state_cell_y, voxel_type.solid)
-    mset(map_x, map_y, sprite.earth1)
+  if btn(4) and btn(5) then
+    if not state_restarting then
+      state_restarting = true
+      state_restart_countdown = max_restart_countdown
+    end
+  else
+    state_restarting = false
   end
 
-  if btn(5) and not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
-    set_cell_voxels(state_cell_x, state_cell_y, voxel_type.empty)
-    mset(map_x, map_y, sprite.empty)
+  if not state_restarting then
+    if btn(4) and
+      are_cell_voxels_empty(state_cell_x, state_cell_y) and
+    not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
+
+      set_cell_voxels(state_cell_x, state_cell_y, voxel_type.solid)
+      mset(map_x, map_y, sprite.earth1)
+
+    elseif btn(5) and not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
+
+      set_cell_voxels(state_cell_x, state_cell_y, voxel_type.empty)
+      mset(map_x, map_y, sprite.empty)
+    end
   end
 end
 
@@ -466,6 +486,14 @@ function _update()
     state_countdown = max_start_countdown
 
     state_target_map += 1
+  end
+
+  if state_restarting then
+    state_restart_countdown = max(state_restart_countdown - 1, 0)
+
+    if state_restart_countdown == 1 then
+      initialize_from_map(state_target_map)
+    end
   end
 end
 
@@ -523,6 +551,20 @@ function draw_map(map_id)
   map(x, y, 0, 0, w, h)
 end
 
+function draw_restart_message(x, y)
+  local msg = ""
+
+  if state_restarting then
+    for i=1,flr(state_restart_countdown / 10) do
+      msg = msg.."™"
+    end
+  else
+    msg = "restart: —+Ž"
+  end
+
+  print(msg, x, y)
+end
+
 function draw_flower(scale)
   local dw = 16 * scale
   local dh = 16 * scale
@@ -550,11 +592,11 @@ function _draw()
     end
   end
 
-  if state_loaded_map > 0 then
-    draw_map(state_loaded_map)
-  end
+  draw_map(user_map)
 
   draw_cell(state_cell_x, state_cell_y, 3)
+
+  draw_restart_message(0, 120)
 
   if state_mode == game_mode.start then
     cls()
@@ -879,4 +921,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
