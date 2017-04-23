@@ -295,7 +295,7 @@ function update_voxels()
   update_counter % 70 == 1 or
     update_counter % 70 == 2 then
 
-    for x=27,37 do
+    for x=29,36 do
       local y = 1
       local idx = from_2d_voxel_idx(x, y)
 
