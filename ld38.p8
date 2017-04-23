@@ -356,9 +356,8 @@ function update_voxels()
           end
         elseif x > 1 and
           voxel_left == voxel_type.empty and rand < 0.5 and
-          (voxel_right == voxel_type.solid or
+          (voxel_right != voxel_type.empty or
              voxel_below == voxel_type.solid or
-             voxel_right == voxel_type.water or
              state_voxel_horz_vel[idx] == -1)
         then
 
@@ -370,9 +369,8 @@ function update_voxels()
 
         elseif x < voxel_dim_x and
           voxel_right == voxel_type.empty and rand > 0.5 and
-          (voxel_left == voxel_type.solid or
+          (voxel_left != voxel_type.empty or
              voxel_below == voxel_type.solid or
-             voxel_left == voxel_type.water or
              state_voxel_horz_vel[idx] == 1)
         then
 
@@ -953,4 +951,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
