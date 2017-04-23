@@ -158,15 +158,21 @@ function wetness_chance(wetness)
   if wetness == 0 then
     return 1
   else
-    return 0.03
+    return 0.02
   end
 end
 
+local wetness_start = {
+  mid=4,
+  high=9,
+  destroy=20
+}
+
 function wetness_to_sprite(wetness, is_roots, is_flower)
-  if wetness < 3 then
+  if wetness < wetness_start.mid then
     return (is_roots and sprite.plant_earth2) or
       (is_flower and sprite.plant_flower2) or sprite.earth2
-  elseif wetness < 6 then
+  elseif wetness < wetness_start.high then
     return (is_roots and sprite.plant_earth3) or
       (is_flower and sprite.plant_flower3) or sprite.earth3
   else
@@ -176,11 +182,11 @@ function wetness_to_sprite(wetness, is_roots, is_flower)
 end
 
 function wetness_victory(wetness)
-  return wetness >= 3 and wetness < 6
+  return wetness >= wetness_start.mid and wetness < wetness_start.high
 end
 
 function wetness_destroy(wetness)
-  return wetness > 15
+  return wetness >= wetness_start.destroy
 end
 
 function should_soak_cell_by_voxel(voxel_x, voxel_y)
