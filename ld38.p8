@@ -507,9 +507,15 @@ end
 
 function get_map_name(map_id)
   if map_id == 1 then
-    return "handsfree"
-  elseif map_id == 2 then
     return "floodplain"
+  elseif map_id == 2 then
+    return "burrower"
+  elseif map_id == 3 then
+    return "paddies"
+  elseif map_id == 4 then
+    return "high security"
+  elseif map_id == 5 then
+    return "waterfall"
   else
     return "unnamed"
   end
