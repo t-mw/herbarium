@@ -481,8 +481,10 @@ function _update()
     state_loaded_map = state_target_map
   end
 
-  update_voxels()
-  update_input()
+  if state_mode != game_mode.start then
+    update_voxels()
+    update_input()
+  end
 
   state_countdown = max(state_countdown - 1, 0)
 
