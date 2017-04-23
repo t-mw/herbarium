@@ -581,9 +581,9 @@ function draw_restart_message()
   local x = 127
 
   if state_restarting then
-    for i=1,flr(state_restart_countdown / 10) do
-      msg = msg.."™"
-      x -= 6
+    for i=1,flr(state_restart_countdown / 4) do
+      msg = msg.."|"
+      x -= 4
     end
   else
     msg = "restart: —+Ž"
@@ -953,3 +953,4 @@ __music__
 00 41424344
 00 41424344
 00 41424344
+
