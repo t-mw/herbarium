@@ -510,6 +510,8 @@ function get_map_name(map_id)
     return "handsfree"
   elseif map_id == 2 then
     return "floodplain"
+  else
+    return "unnamed"
   end
 end
 
