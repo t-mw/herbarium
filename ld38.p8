@@ -343,6 +343,7 @@ function update_voxels()
 
           if wetness_destroy(wetness) then
             set_cell_voxels(cell_x, cell_y, voxel_type.empty)
+            state_cell_wetness[from_2d_cell_idx(cell_x, cell_y)] = 0
           end
         elseif x > 1 and
           voxel_left == voxel_type.empty and rand < 0.5 and
@@ -458,6 +459,7 @@ function update_input()
     elseif btn(5) and not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
 
       set_cell_voxels(state_cell_x, state_cell_y, voxel_type.empty)
+      state_cell_wetness[from_2d_cell_idx(state_cell_x, state_cell_y)] = 0
       mset(map_x, map_y, sprite.empty)
     end
   end
