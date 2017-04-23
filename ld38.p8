@@ -226,6 +226,13 @@ function soak_cell_by_voxel(voxel_x, voxel_y)
   return wetness
 end
 
+function can_place_at(cell_x, cell_y)
+  local map_x, map_y = cell_to_map_pos(user_map, cell_x, cell_y)
+
+  return are_cell_voxels_empty(cell_x, cell_y) and
+    not fget(mget(map_x, map_y), sprite_flag.is_frozen)
+end
+
 function set_cell_voxels(cell_x, cell_y, set_to)
   local x1, y1 = cell_to_voxel_pos(cell_x, cell_y)
   local x2 = x1 + voxels_per_cell - 1
@@ -437,8 +444,6 @@ function update_input()
     state_cell_y = min(state_cell_y + 1, cell_dim_y)
   end
 
-  local map_x, map_y = cell_to_map_pos(user_map, state_cell_x, state_cell_y)
-
   if btn(4) and btn(5) then
     if not state_restarting then
       state_restarting = true
@@ -448,10 +453,10 @@ function update_input()
     state_restarting = false
   end
 
+  local map_x, map_y = cell_to_map_pos(user_map, state_cell_x, state_cell_y)
+
   if not state_restarting then
-    if btn(4) and
-      are_cell_voxels_empty(state_cell_x, state_cell_y) and
-    not fget(mget(map_x, map_y), sprite_flag.is_frozen) then
+    if btn(4) and can_place_at(state_cell_x, state_cell_y) then
 
       set_cell_voxels(state_cell_x, state_cell_y, voxel_type.solid)
       mset(map_x, map_y, sprite.earth1)
@@ -559,7 +564,7 @@ end
 function draw_cell(x_cell, y_cell, clr)
   local x1, y1 = get_cell_screen_pos(x_cell, y_cell)
   local x2, y2 = get_cell_screen_pos(x_cell + 1, y_cell + 1)
-  rectfill(x1, y1, x2 - 1, y2 - 1, clr)
+  rect(x1, y1, x2 - 1, y2 - 1, clr)
 end
 
 function draw_map(map_id)
@@ -610,7 +615,11 @@ function _draw()
 
   draw_map(user_map)
 
-  draw_cell(state_cell_x, state_cell_y, 3)
+  if can_place_at(state_cell_x, state_cell_y) then
+    draw_cell(state_cell_x, state_cell_y, 3)
+  else
+    draw_cell(state_cell_x, state_cell_y, 8)
+  end
 
   draw_restart_message(0, 120)
 
