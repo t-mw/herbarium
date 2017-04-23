@@ -23,7 +23,8 @@ local sprite = {
 local sprite_flag = {
   is_solid=0,
   is_frozen=1,
-  is_roots=2
+  is_roots=2,
+  is_dry=3
 }
 
 local voxel_px_size = 2
@@ -193,11 +194,10 @@ function should_soak_cell_by_voxel(voxel_x, voxel_y)
   local x, y = voxel_to_cell_pos(voxel_x, voxel_y)
   local idx = from_2d_cell_idx(x, y)
 
-  if rnd(1) < wetness_chance(state_cell_wetness[idx]) then
-    return true
-  end
+  local map_x, map_y = cell_to_map_pos(user_map, x, y)
+  local is_dry = fget(mget(map_x, map_y), sprite_flag.is_dry)
 
-  return false
+  return not is_dry and rnd(1) < wetness_chance(state_cell_wetness[idx])
 end
 
 function soak_cell_by_voxel(voxel_x, voxel_y)
