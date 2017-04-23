@@ -186,8 +186,8 @@ function wetness_victory(wetness)
   return wetness >= wetness_start.mid and wetness < wetness_start.high
 end
 
-function wetness_destroy(wetness)
-  return wetness >= wetness_start.destroy
+function wetness_destroy(wetness, is_roots)
+  return wetness >= wetness_start.destroy and not is_roots
 end
 
 function should_soak_cell_by_voxel(voxel_x, voxel_y)
@@ -209,11 +209,12 @@ function soak_cell_by_voxel(voxel_x, voxel_y)
 
   local map_x, map_y = cell_to_map_pos(user_map, x, y)
 
-  if wetness_destroy(wetness) then
+  local is_roots = state_cell_is_roots[idx]
+  local is_flower = false
+
+  if wetness_destroy(wetness, is_roots) then
     mset(map_x, map_y, 0)
   else
-    local is_roots = state_cell_is_roots[idx]
-    local is_flower = false
     mset(map_x, map_y, wetness_to_sprite(wetness, is_roots, is_flower))
 
     if is_roots then
@@ -347,10 +348,11 @@ function update_voxels()
           local wetness = soak_cell_by_voxel(x, y + 1)
 
           local cell_x, cell_y = voxel_to_cell_pos(x, y + 1)
+          local cell_idx = from_2d_cell_idx(cell_x, cell_y)
 
-          if wetness_destroy(wetness) then
+          if wetness_destroy(wetness, state_cell_is_roots[cell_idx]) then
             set_cell_voxels(cell_x, cell_y, voxel_type.empty)
-            state_cell_wetness[from_2d_cell_idx(cell_x, cell_y)] = 0
+            state_cell_wetness[cell_idx] = 0
           end
         elseif x > 1 and
           voxel_left == voxel_type.empty and rand < 0.5 and
